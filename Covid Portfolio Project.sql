@@ -1,5 +1,9 @@
 /*
-Covid Portfolio Project
+Covid-19 Portfolio Project
+The source .csv files were CovidVaccinations.csv and CovidDeaths.csv, both of
+which were found on 'https://ourworldindata.org/covid-deaths' website.  Both
+were then imported in MS SQL Server.  The project uses joins, CTEs, temp tables,
+as well windows functions.
 */
 
 --Checking to determine if both tables were imported
@@ -57,14 +61,14 @@ FROM PortfolioProject..CovidDeaths
 Order By 1,2
 
 
---What countries have the highest infection rates relative to their population
+--What countries have the highest infection rates relative to their population?
 Select Location,  Population, MAX(total_cases) as HighestInfectionCount, MAX(total_cases/population) * 100 As PercentPopulationInfected
 FROM PortfolioProject..CovidDeaths
 --WHERE Location like '%states%'
 GROUP BY Location, Population
 Order By PercentPopulationInfected Desc
 
---Showing the countries with highest Death Count per Population
+--Which countries with highest Death Count per population?
 
 Select Location,   MAX(CAST(total_deaths AS INT)) as TotalDeathCount
 FROM PortfolioProject..CovidDeaths
@@ -75,7 +79,7 @@ Order By TotalDeathCount Desc
 
 
 
---ATTEMPTING TO BREAK DOWN THE DATA BY CONTINENT
+--Breaking down the data by continent.
 
 Select location, MAX(CAST(total_deaths AS INT)) as TotalDeathCount
 FROM PortfolioProject..CovidDeaths
@@ -85,7 +89,7 @@ GROUP BY location
 Order By TotalDeathCount Desc
 
 
---Show continents with highest death count per population
+--Which continents with highest death count per population?
 Select continent, MAX(CAST(total_deaths AS INT)) as TotalDeathCount
 FROM PortfolioProject..CovidDeaths
 --WHERE Location like '%states%'
@@ -130,7 +134,7 @@ ORDER BY 2,3
 
 
 
---USE CTE
+--Use of CTEs
 
 With PopvsVac(Continent, Location, Date, Population, NewVaccinations, RollingPeopleVaccinated)
 AS
@@ -148,7 +152,7 @@ WHERE dea.continent IS NOT NULL
 
 --Using previous CTE to determine most percentage 
 --of the population that has been vaccinated 
---by country and location
+--by country and location.
 SELECT Continent,Location, Max((RollingPeopleVaccinated/Population)*100)
 FROM PopvsVac
 GROUP BY Continent, Location
@@ -156,7 +160,7 @@ ORDER BY Continent ASC, Location ASC
 
 
 --Viewing the increasing percentage of population vaccinated by population
---with the progression of time
+--with the progression of time.
 --SELECT * , (RollingPeopleVaccinated/Population)*100 AS Percentage
 --FROM PopvsVac
 
@@ -190,7 +194,7 @@ FROM #PercentPopulationVaccinated
 
 
 --Creating View to store data for later visualizations
---Views cannot contain the ORDER BY clause
+--Note: Views cannot contain the ORDER BY clause
 
 --DROP VIEW IF EXISTS PercentPopulationVaccinated
 
