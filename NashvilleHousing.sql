@@ -1,15 +1,16 @@
+
 /*
-
-Cleaning Data in SQL Queries
-
+The source csv file is "Nashville Housing Data for Data Cleaning.csv" which
+was found on github.  The dataset contains real estate data for the Nashville, TN
+area that will be used for this project.
 */
 
 SELECT *
 FROM PortfolioProject..NashvilleHousing
 
 
---Standardize Date Format for SaleDate field due to its datetime format
---Transform it yyyy-mm-dd.
+--Standardize date Format for SaleDate field due to its datetime format
+--Transform it 'yyyy-mm-dd', discarding the time element that is present.
 
 
 SELECT SaleDate, CONVERT(Date, SaleDate)
@@ -20,7 +21,7 @@ UPDATE NashvilleHousing
 SET SaleDate = CONVERT(Date, SaleDate)
 
 --The conversion didn't materialize using this statement, 
---so we need an alternative method
+--so we need an alternative method of creating a new column.
 
 ALTER TABLE NashvilleHousing
 Add SaleDateConverted Date;
@@ -36,6 +37,11 @@ FROM PortfolioProject..NashvilleHousing
 ---------------------------------------------------------------------------------------------------------------
 
 --Populate Property Address data
+--There are so many records where this field is null but
+--is populated in other records.  I resorted to searching
+--for records with same ParcelID where the PropertyAddress was
+--populated as a reference point to fill those empty PropertyAddress
+--fields.
 
 SELECT *
 FROM PortfolioProject..NashvilleHousing
@@ -65,14 +71,13 @@ WHERE a.PropertyAddress IS NULL
 
 ---------------------------------------------------------------------------------------------------------------
 
---Breaking out Address into individual columns (Address, City, State)
+--Separating Address field into 2 individual columns (Address and City).
 
 
 SELECT SUBSTRING(PropertyAddress, 1,CHARINDEX(',',PropertyAddress)-1) AS Address
        ,SUBSTRING(PropertyAddress,CHARINDEX(',',PropertyAddress)+1, LEN(PropertyAddress)) AS City
 FROM PortfolioProject..NashvilleHousing
  
-
 
 ALTER TABLE PortfolioProject..NashvilleHousing
 Add PropertySplitAddress Nvarchar(255);
@@ -89,8 +94,10 @@ UPDATE PortfolioProject..NashvilleHousing
 SET PropertySplitCity = SUBSTRING(PropertyAddress,CHARINDEX(',',PropertyAddress)+1, LEN(PropertyAddress))
 
 
-
-
+--Separating Owner Address field into 3 individual columns (Address,City, and State).
+--Since the ParseName function is only useful for periods, we replace the commas with 
+--periods before separating the string.
+	
 SELECT OwnerAddress
 FROM PortfolioProject..NashvilleHousing
 
@@ -99,7 +106,6 @@ PARSENAME(REPLACE(OwnerAddress,',','.'),3)
 ,PARSENAME(REPLACE(OwnerAddress,',','.'),2)
 ,PARSENAME(REPLACE(OwnerAddress,',','.'),1)
 FROM PortfolioProject..NashvilleHousing
-
 
 
 ALTER TABLE PortfolioProject..NashvilleHousing
@@ -121,16 +127,12 @@ Add OwnerSplitState Nvarchar(255);
 UPDATE PortfolioProject..NashvilleHousing
 SET OwnerSplitState = PARSENAME(REPLACE(OwnerAddress,',','.'),1)
 
-
-
-
-
-
-
-
+	
 ---------------------------------------------------------------------------------------------------------------
-
---Change Y and N to Yes and No in "Sold as Vacant" field
+	
+--Changing 'Y' and 'N' to "Yes" and "No" in Sold as Vacant field.  The field
+--currently contains four distinct values ('Y','N','Yes', and 'No'), so "Yes" or
+--"No" should be the only two options to standardize the values.
 
 
 SELECT DISTINCT(SoldAsVacant)
@@ -147,39 +149,38 @@ ORDER BY 2 DESC
 SELECT SoldAsVacant
 , CASE WHEN SoldAsVacant = 'Y' THEN 'Yes'
        WHEN SoldAsVacant = 'N' THEN 'No'
-	   ELSE SoldAsVacant
-	   END
+	ELSE SoldAsVacant
+	END
 FROM PortfolioProject..NashvilleHousing
 WHERE SoldAsVacant IN ('Y','N')
 
 
 UPDATE PortfolioProject..NashvilleHousing
 SET SoldAsVacant = CASE WHEN SoldAsVacant = 'Y' THEN 'Yes'
-       WHEN SoldAsVacant = 'N' THEN 'No'
-	   ELSE SoldAsVacant
-	   END
-
-
+                        WHEN SoldAsVacant = 'N' THEN 'No'
+	                ELSE SoldAsVacant
+	                END
 
 ---------------------------------------------------------------------------------------------------------------
 
+	
 --Remove Duplicates
---Note: Not a standard practice to delete data;these would be placed in a temp table as a precaution
+--Note: It is not a standard practice to delete data;these records would be placed in a temp table as a precaution.
 
 
 --Will need to partition records on fields that should be unique to each row
+	
 WITH ROWNUMCTE AS(
 SELECT *,
    ROW_NUMBER() OVER (
    PARTITION BY ParcelID,
                 PropertyAddress,
-				SalePrice,
-				SaleDate,
-				LegalReference
-				ORDER BY
-				   UniqueID
-				   ) row_num
-
+		SalePrice,
+		SaleDate,
+		LegalReference
+		ORDER BY
+		  UniqueID
+		  ) row_num
 FROM PortfolioProject..NashvilleHousing
 --ORDER BY ParcelID
 )
